@@ -1,0 +1,3 @@
+Download ONE .gguf model file and put it in this folder — see README.md
+"Local AI engine setup" for recommended links. Gyrus automatically uses
+whichever .gguf file it finds here.

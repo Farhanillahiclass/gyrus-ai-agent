@@ -1,0 +1,107 @@
+text,intent
+"play sufi music on youtube",youtube_play
+"youtube pe qawwali chalao",youtube_play
+"play a song",youtube_play
+"youtube kholo aur music lagao",youtube_play
+"can you play some music on youtube",youtube_play
+"play atif aslam songs",youtube_play
+"youtube par cricket highlights dikhao",youtube_play
+"put on some music",youtube_play
+"mujhe gaane sunne hain youtube par",youtube_play
+"video lagao is topic ki",youtube_play
+"lock my pc",system_lock
+"lock the computer",system_lock
+"pc ko lock kar do",system_lock
+"lock kar do system",system_lock
+"can you lock my laptop",system_lock
+"lock screen kar do",system_lock
+"restart my computer",system_restart
+"restart the pc please",system_restart
+"system ko restart karo",system_restart
+"reboot my laptop",system_restart
+"pc dobara chalu karo",system_restart
+"shut down the computer",system_shutdown
+"shutdown my pc",system_shutdown
+"system band kar do",system_shutdown
+"turn off the computer",system_shutdown
+"pc bandh karna hai",system_shutdown
+"put the pc to sleep",system_sleep
+"sleep mode mein daalo",system_sleep
+"go to sleep",system_sleep
+"pc ko sula do",system_sleep
+"open notepad",open_app
+"notepad khol do",open_app
+"open chrome browser",open_app
+"chrome khol do please",open_app
+"launch word",open_app
+"vscode khol do",open_app
+"open calculator",open_app
+"calculator chalao",open_app
+"open my email website",open_app
+"gmail khol do",open_app
+"organize my downloads folder",organize_files
+"downloads ko organize kar do",organize_files
+"clean up my desktop",organize_files
+"desktop bikhra hua hai organize karo",organize_files
+"sort my downloads by file type",organize_files
+"find the file resume",find_file
+"mera resume dhoondo",find_file
+"search for file report.pdf",find_file
+"file dhoondni hai budget wali",find_file
+"where is my project file",find_file
+"take a screenshot",screenshot
+"screenshot le lo",screenshot
+"capture the screen",screenshot
+"screen ka screenshot lo",screenshot
+"remind me to submit assignment tomorrow",task_add
+"mujhe yaad dilana meeting ke liye",task_add
+"add a task to buy groceries",task_add
+"naya task add karo",task_add
+"reminder set karo doctor appointment ke liye",task_add
+"i need to remember to call mom",task_add
+"show my tasks",task_list
+"mere pending tasks dikhao",task_list
+"what are my tasks today",task_list
+"list all my to-dos",task_list
+"pending kaam dikhao",task_list
+"give me a task summary",task_summary
+"executive summary of my tasks",task_summary
+"kitne tasks pending hain overall",task_summary
+"what's the weather today",weather
+"aaj mausam kaisa hai",weather
+"is it going to rain today",weather
+"weather in islamabad",weather
+"mausam ka haal batao",weather
+"give me the latest news",news
+"aaj ki khabrain sunao",news
+"news about technology",news
+"what's happening in the world today",news
+"pakistan ki taza khabrain",news
+"research quantum computing for me",research
+"search for information about black holes",research
+"is topic par research karo",research
+"internet se maloomat nikalo about ai",research
+"i need a diet plan",diet_plan
+"help me plan my meals",diet_plan
+"mujhe calorie count chahiye",diet_plan
+"diet plan bana do weight loss ke liye",diet_plan
+"what should i eat to lose weight",diet_plan
+"suggest a meal plan for muscle gain",diet_plan
+"how is my study performance",study_performance
+"mera study performance kaisa hai",study_performance
+"show my performance index",study_performance
+"study consistency batao",study_performance
+"salaam gyrus",greeting
+"hello gyrus",greeting
+"assalam o alaikum",greeting
+"hi there",greeting
+"kaisay ho gyrus",greeting
+"good morning gyrus",greeting
+"what is the capital of france",chitchat
+"explain how photosynthesis works",chitchat
+"write a python function to reverse a string",chitchat
+"tell me a joke",chitchat
+"what do you think about ai",chitchat
+"help me solve this math problem",chitchat
+"aaj mera mood theek nahi",chitchat
+"batao zindagi ka maqsad kya hai",chitchat

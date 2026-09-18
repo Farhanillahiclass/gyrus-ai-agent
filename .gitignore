@@ -1,0 +1,37 @@
+# Virtual environments
+.venv/
+venv/
+
+# Secrets
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Local AI models
+models/*.gguf
+models/*.bin
+models/*.safetensors
+models/*.pt
+models/*.pth
+
+# Model cache
+models/.cache/
+
+# Local data
+data/screenshots/
+data/research/
+data/tasks.json
+data/notes/
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

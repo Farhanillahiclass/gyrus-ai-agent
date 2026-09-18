@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Gyrus — Dashboard</title>
+<link rel="icon" type="image/png" href="assets/gyrus-logo.png">
+<!-- No external font CDN — removed on purpose: a blocked/slow CDN request must
+     never be able to break page load. Fonts below are safe system stacks that
+     render correctly on Windows/Mac/Linux without any network call. -->
+<style>
+  :root{
+    --bg:#050a10; --panel:rgba(10,20,28,0.82); --border:rgba(62,198,255,0.28);
+    --cyan:#3ec6ff; --gold:#d9ac4f; --text:#e7f1f6; --text-muted:#6f8a97; --danger:#e0605a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; height:100%; background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,-apple-system,sans-serif; font-size:15px; overflow:hidden;}
+  .urdu{font-family:'Jameel Noori Nastaleeq','Urdu Typesetting','Noto Nastaliq Urdu',serif; direction:rtl; font-size:1.15em;}
+  .brandfont{font-family:'Consolas','Segoe UI Mono','Courier New',monospace; letter-spacing:0.5px;}
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:4px; backdrop-filter:blur(10px);}
+  input,select,button{font-family:inherit;}
+  ::-webkit-scrollbar{width:6px;} ::-webkit-scrollbar-thumb{background:var(--border); border-radius:3px;}
+
+  /* ---------- HUD corner frame (always visible, all pages) ---------- */
+  .hud-corner{position:fixed; z-index:5; pointer-events:none; font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-size:9px; letter-spacing:1.5px; color:var(--cyan); opacity:0.75;}
+  .hud-corner .dots{display:flex; gap:3px; margin-top:4px;}
+  .hud-corner .dots span{width:4px; height:4px; background:var(--cyan); border-radius:1px; opacity:0.6;}
+  .hud-corner .dots span:nth-child(1){opacity:1;}
+  #hud-tl{top:14px; left:14px;}
+  #hud-tr{top:14px; right:14px; text-align:right;}
+  #hud-tr .dots{justify-content:flex-end;}
+  #hud-bl{bottom:10px; left:14px; color:var(--text-muted);}
+  #hud-br{bottom:10px; right:14px; color:var(--text-muted); text-align:right;}
+  .corner-bracket{position:fixed; z-index:5; width:22px; height:22px; border-color:var(--cyan); opacity:0.5; pointer-events:none;}
+  #cb-tl{top:8px; left:8px; border-top:2px solid; border-left:2px solid;}
+  #cb-tr{top:8px; right:8px; border-top:2px solid; border-right:2px solid;}
+  #cb-bl{bottom:8px; left:8px; border-bottom:2px solid; border-left:2px solid;}
+  #cb-br{bottom:8px; right:8px; border-bottom:2px solid; border-right:2px solid;}
+
+  /* ---------- layout ---------- */
+  #app{position:fixed; inset:0; z-index:1; display:flex;}
+  #nav{width:84px; display:flex; flex-direction:column; align-items:center; padding:52px 0 40px; gap:6px; border-right:1px solid var(--border); background:rgba(5,10,16,0.6); backdrop-filter:blur(8px);}
+  #nav .mark{font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-weight:800; font-size:22px; color:var(--gold); margin-bottom:18px; text-shadow:0 0 12px rgba(217,172,79,0.5);}
+  .nav-btn{width:60px; height:56px; border-radius:6px; border:1px solid transparent; background:none; color:var(--text-muted); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:9px; font-family:'Consolas','Segoe UI Mono','Courier New',monospace; letter-spacing:0.5px;}
+  .nav-btn .ic{font-size:18px;}
+  .nav-btn:hover{color:var(--text);}
+  .nav-btn.active{color:var(--cyan); border-color:var(--border); background:rgba(62,198,255,0.08); box-shadow: inset 0 0 12px rgba(62,198,255,0.15);}
+  #nav-foot{margin-top:auto; font-size:7.5px; color:var(--text-muted); text-align:center; padding:0 6px; line-height:1.5; font-family:'Consolas','Segoe UI Mono','Courier New',monospace;}
+  #nav-foot b{color:var(--gold);}
+
+  #content{flex:1; position:relative; display:flex; flex-direction:column; padding:44px 30px 28px; overflow:hidden;}
+  .page{display:none; flex:1; flex-direction:column; min-height:0;}
+  .page.active{display:flex;}
+
+  #top-status{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  #top-status h2{font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-weight:700; font-size:15px; margin:0; color:var(--text); letter-spacing:1px;}
+  #status-badge{padding:6px 12px; font-size:10.5px; color:var(--text-muted); display:flex; align-items:center; gap:6px; font-family:'Consolas','Segoe UI Mono','Courier New',monospace;}
+  #status-badge .dot{width:6px; height:6px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan);}
+
+  /* ---------- HOME ---------- */
+
+  /* ---------- HOME: orb + flanking HUD panels (matches reference design) ---------- */
+  #page-home{padding-top:6px;}
+  #home-grid{flex:1; display:grid; grid-template-columns:280px 1fr 280px; gap:20px; align-items:stretch; min-height:0;}
+  .hud-col{display:flex; flex-direction:column; gap:16px; min-height:0;}
+  .hud-panel{background:rgba(10,20,28,0.65); border:1px solid var(--border); border-radius:8px; backdrop-filter:blur(12px); padding:14px; flex:1; min-height:0; display:flex; flex-direction:column; gap:10px; box-shadow:0 0 24px rgba(62,198,255,0.06) inset;}
+  #engine-status-panel, #activity-panel{flex:0 0 auto;}
+  .hud-panel h3{font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-size:11px; color:var(--cyan); letter-spacing:1.5px; margin:0; padding-bottom:8px; border-bottom:1px solid var(--border);}
+  #command-log{flex:1; overflow-y:auto; font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-size:10.5px; line-height:1.7; color:var(--text-muted);}
+  #command-log .cl-line{margin-bottom:4px;}
+  #command-log .cl-line.user{color:var(--gold);}
+  #command-log .cl-line.illi{color:var(--cyan);}
+  #command-log .cl-time{color:var(--text-muted); margin-right:5px;}
+
+  #orb-zone{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;}
+  #orb-canvas{max-width:100%;}
+  #orb-label{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;}
+  #orb-label .brandfont{display:block; font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-weight:700; font-size:22px; letter-spacing:3px; color:var(--text); text-shadow:0 0 12px rgba(62,198,255,0.6);}
+  #orb-sublabel{display:block; font-size:10px; letter-spacing:3px; color:var(--cyan); margin-top:4px;}
+  #orb-status-badge{margin-top:14px; font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-size:10px; letter-spacing:2px; color:var(--text-muted); display:flex; align-items:center; gap:8px;}
+  #orb-status-badge .dot{width:5px; height:5px; border-radius:50%; background:var(--cyan); box-shadow:0 0 6px var(--cyan);}
+
+  .gauge-row{display:flex; gap:16px; justify-content:center;}
+  .gauge{display:flex; flex-direction:column; align-items:center; gap:4px; font-size:10px; color:var(--text-muted); letter-spacing:1px;}
+  .gauge svg{width:56px; height:56px; transform:rotate(-90deg);}
+  .gauge-bg{fill:none; stroke:var(--border); stroke-width:5;}
+  .gauge-fg{fill:none; stroke:var(--cyan); stroke-width:5; stroke-linecap:round; stroke-dasharray:163; stroke-dashoffset:163; transition:stroke-dashoffset 0.6s ease;}
+  .gauge b{color:var(--gold); font-size:12px;}
+  #activity-chart{width:100%; height:auto;}
+
+  @media (max-width:1100px){ #home-grid{grid-template-columns:1fr;} .hud-col{flex-direction:row;} .hud-panel{max-height:160px;} }
+  #controls{display:flex; align-items:center; gap:12px; padding:10px 14px; width:min(680px,90%);}
+  #text-input{flex:1; background:transparent; border:none; color:var(--text); font-size:15px; outline:none; font-family:'Segoe UI',system-ui,sans-serif;}
+  #text-input::placeholder{color:var(--text-muted);}
+  .round-btn{width:38px; height:38px; border-radius:50%; border:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px;}
+  .round-btn.mic.listening{background:var(--danger); border-color:var(--danger); animation:pulse 1.2s infinite;}
+  .round-btn.send{background:var(--cyan); border:none; color:#04181f;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(224,96,90,.5);}70%{box-shadow:0 0 0 10px rgba(224,96,90,0);}100%{box-shadow:0 0 0 0 rgba(224,96,90,0);}}
+  #hint{font-size:10.5px; color:var(--text-muted); font-family:'Consolas','Segoe UI Mono','Courier New',monospace; letter-spacing:0.5px;}
+
+  /* ---------- generic 2-col layout used by most pages ---------- */
+  .split-layout{flex:1; display:flex; gap:18px; min-height:0;}
+  .zone-3d{flex:1;}
+  .side-panel{width:330px; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;}
+  .side-panel h3{font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-size:11px; color:var(--text-muted); margin:0 0 4px; letter-spacing:1px;}
+
+  /* ---------- flat professional pages (no 3D) — Tasks/System/Study/Comm/Tools/Research/Detect/Settings ---------- */
+  .flat-page{flex:1; overflow-y:auto; padding-bottom:20px;}
+  .flat-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; align-items:start;}
+  .card{padding:18px; display:flex; flex-direction:column; gap:11px;}
+  .card h3{font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-size:11.5px; color:var(--cyan); margin:0; letter-spacing:1px; padding-bottom:8px; border-bottom:1px solid var(--border);}
+  .card.span-2{grid-column:span 2;}
+  @media (max-width:900px){ .card.span-2{grid-column:span 1;} }
+
+  #add-task-form{display:flex; gap:6px;}
+  #add-task-form input[type=text]{flex:1; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:7px 9px; border-radius:4px; font-size:13px;}
+  #add-task-form select{background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:4px; font-size:11px;}
+  #add-task-form button, .go-btn{background:var(--cyan); border:none; color:#04181f; border-radius:4px; cursor:pointer; font-weight:700;}
+  #add-task-form button{width:30px;}
+  .task-row{display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid var(--border); font-size:13px;}
+  .task-row .pr{font-size:9px; padding:1px 6px; border-radius:8px; border:1px solid var(--gold); color:var(--gold); flex-shrink:0;}
+  .task-row .txt{flex:1;}
+  .task-row button{background:none; border:none; color:var(--text-muted); cursor:pointer;}
+  .task-row button:hover{color:var(--cyan);}
+
+  .sys-btn{background:rgba(255,255,255,0.03); border:1px solid var(--border); color:var(--text); padding:11px; border-radius:5px; cursor:pointer; font-size:13px; text-align:left; display:flex; justify-content:space-between; align-items:center; width:100%;}
+  .sys-btn:hover{border-color:var(--cyan);}
+  .sys-btn.danger:hover{border-color:var(--danger); color:var(--danger);}
+  .slider-row{display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--text-muted);}
+  input[type=range]{accent-color:var(--cyan);}
+  #sys-log{font-size:10.5px; color:var(--text-muted); margin-top:4px; max-height:90px; overflow-y:auto;}
+
+  .metric-row{display:flex; justify-content:space-between; font-size:13px; padding:4px 0;}
+  .metric-row b{color:var(--gold);}
+  form.stack{display:flex; flex-direction:column; gap:7px;}
+  form.stack input, form.stack select, form.stack textarea{background:var(--bg); border:1px solid var(--border); color:var(--text); padding:7px 9px; border-radius:4px; font-size:12.5px; font-family:inherit;}
+  form.stack textarea{resize:vertical; min-height:60px;}
+  form.stack button{background:var(--cyan); border:none; color:#04181f; padding:9px; border-radius:4px; cursor:pointer; font-weight:700; font-size:12.5px;}
+  .result-box{font-size:12px; padding:10px; border:1px solid var(--border); border-radius:5px; display:none;}
+  .result-box.show{display:block;}
+  .inline-form{display:flex; gap:5px;}
+  .inline-form input{flex:1; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:6px 8px; border-radius:4px; font-size:11.5px;}
+  .card > input[type=text]{width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:6px 8px; border-radius:4px; font-size:11.5px;}
+  .inline-form button{background:var(--cyan); border:none; color:#04181f; border-radius:4px; padding:0 10px; cursor:pointer; font-size:11px;}
+  .tab-row{display:flex; gap:6px; margin-bottom:8px;}
+  .tab-row button{flex:1; background:rgba(255,255,255,0.03); border:1px solid var(--border); color:var(--text-muted); padding:6px; border-radius:4px; cursor:pointer; font-size:11px; font-family:'Consolas','Segoe UI Mono','Courier New',monospace;}
+  .tab-row button.active{color:var(--cyan); border-color:var(--cyan);}
+  .subpane{display:none; flex-direction:column; gap:10px;}
+  .subpane.active{display:flex;}
+  .email-item{font-size:11.5px; padding:8px; border:1px solid var(--border); border-radius:4px; margin-bottom:6px;}
+  .email-item b{color:var(--gold);}
+
+  #settings-body{max-width:560px; display:flex; flex-direction:column; gap:16px;}
+  .info-card{padding:16px;}
+  .info-card h3{font-family:'Consolas','Segoe UI Mono','Courier New',monospace; font-size:11px; color:var(--text-muted); margin:0 0 8px; letter-spacing:1px;}
+  .info-card .val{font-size:14px;}
+  .info-card .val.mono{font-family:monospace; color:var(--cyan);}
+  .link-row{display:flex; gap:14px; margin-top:8px;}
+  .link-row a{color:var(--cyan); text-decoration:none; font-size:12px; border:1px solid var(--border); padding:6px 12px; border-radius:14px; font-family:'Consolas','Segoe UI Mono','Courier New',monospace;}
+  .link-row a:hover{border-color:var(--cyan);}
+  #brand-footer{text-align:center; padding:14px; font-size:11px; color:var(--text-muted); font-family:'Consolas','Segoe UI Mono','Courier New',monospace;}
+  #brand-footer b{color:var(--gold);}
+</style>
+</head>
+<body>
+
+<div class="corner-bracket" id="cb-tl"></div>
+<div class="corner-bracket" id="cb-tr"></div>
+<div class="corner-bracket" id="cb-bl"></div>
+<div class="corner-bracket" id="cb-br"></div>
+<div class="hud-corner" id="hud-tl">SYSTEM ONLINE<div class="dots"><span></span><span></span><span></span><span></span><span></span></div></div>
+<div class="hud-corner" id="hud-tr">GYRUS CORE<div class="dots"><span></span><span></span><span></span><span></span><span></span></div></div>
+<div class="hud-corner" id="hud-bl">STATUS / ACTIVE</div>
+<div class="hud-corner" id="hud-br">VER. 1.0</div>
+
+<div id="app">
+  <nav id="nav">
+    <div class="mark">G</div>
+    <button class="nav-btn active" data-page="home"><span class="ic">◈</span>HOME</button>
+    <button class="nav-btn" data-page="tasks"><span class="ic">☰</span>TASKS</button>
+    <button class="nav-btn" data-page="system"><span class="ic">⌘</span>SYSTEM</button>
+    <button class="nav-btn" data-page="study"><span class="ic">◔</span>STUDY</button>
+    <button class="nav-btn" data-page="comm"><span class="ic">✉</span>COMMS</button>
+    <button class="nav-btn" data-page="tools"><span class="ic">⚒</span>TOOLS</button>
+    <button class="nav-btn" data-page="research"><span class="ic">▤</span>RESEARCH</button>
+    <button class="nav-btn" data-page="detect"><span class="ic">◉</span>DETECT</button>
+    <button class="nav-btn" data-page="settings"><span class="ic">⚙</span>SET</button>
+    <div id="nav-foot">POWERED BY<br><b>MRS OFFICIAL</b></div>
+  </nav>
+
+  <div id="content">
+    <div id="top-status">
+      <h2 id="page-title">GYRUS</h2>
+      <div id="status-badge" class="panel"><span class="dot"></span><span id="status-text">CONNECTING…</span></div>
+    </div>
+
+    <!-- HOME -->
+    <div class="page active" id="page-home">
+      <div id="home-grid">
+        <div class="hud-col">
+          <div class="hud-panel" id="command-log-panel">
+            <h3>COMMAND LOG</h3>
+            <div id="command-log"></div>
+          </div>
+          <div class="hud-panel" id="engine-status-panel">
+            <h3>ENGINE STATUS</h3>
+            <div class="metric-row"><span>AI Provider</span><b id="home-provider">–</b></div>
+            <div class="metric-row"><span>Intent Classifier</span><b style="color:var(--cyan);">local ✓</b></div>
+            <div class="metric-row"><span>Memory</span><b id="home-memory">–</b></div>
+            <div class="metric-row"><span>Backend</span><b id="home-backend">–</b></div>
+          </div>
+        </div>
+
+        <div id="orb-zone">
+          <canvas id="orb-canvas" width="360" height="360"></canvas>
+          <div id="orb-label"><span class="brandfont">GYRUS</span><span id="orb-sublabel">ASSISTANT</span></div>
+          <div id="orb-status-badge">OPERATIONAL <span class="dot"></span> ACTIVE</div>
+        </div>
+
+        <div class="hud-col">
+          <div class="hud-panel" id="system-status-panel">
+            <h3>SYSTEM STATUS</h3>
+            <div class="gauge-row">
+              <div class="gauge"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="26" class="gauge-bg"/><circle cx="30" cy="30" r="26" class="gauge-fg" id="gauge-cpu" /></svg><span>CPU</span><b id="gaugeval-cpu">–</b></div>
+              <div class="gauge"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="26" class="gauge-bg"/><circle cx="30" cy="30" r="26" class="gauge-fg" id="gauge-ram" /></svg><span>RAM</span><b id="gaugeval-ram">–</b></div>
+            </div>
+            <div class="metric-row"><span>Disk</span><b id="home-disk">–</b></div>
+            <div class="metric-row"><span>Pending Tasks</span><b id="home-tasks">–</b></div>
+          </div>
+          <div class="hud-panel" id="activity-panel">
+            <h3>CPU ACTIVITY</h3>
+            <canvas id="activity-chart" width="240" height="90"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div id="hint">TYPE OR TAP THE MIC — EVERYTHING RUNS LOCALLY, NO CLOUD</div>
+      <div id="controls" class="panel">
+        <button class="round-btn mic" id="mic-btn">🎙</button>
+        <input id="text-input" type="text" placeholder="Kuch bhi puchein... (Urdu/English)">
+        <button class="round-btn send" id="send-btn">➤</button>
+      </div>
+    </div>
+
+    <!-- TASKS -->
+    <div class="page" id="page-tasks">
+      <div class="flat-page">
+        <div class="flat-grid">
+          <div class="card">
+            <h3>ADD TASK</h3>
+            <form id="add-task-form">
+              <input type="text" id="task-text" placeholder="Naya task...">
+              <select id="task-priority"><option>Low</option><option selected>Medium</option><option>High</option></select>
+              <button type="submit">+</button>
+            </form>
+          </div>
+          <div class="card span-2">
+            <h3>PENDING TASKS</h3>
+            <div id="task-list">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYSTEM -->
+    <div class="page" id="page-system">
+      <div class="flat-page">
+        <div class="flat-grid">
+          <div class="card">
+            <h3>POWER</h3>
+            <button class="sys-btn" data-action="lock">Lock PC <span>🔒</span></button>
+            <button class="sys-btn" data-action="sleep">Sleep <span>☾</span></button>
+            <button class="sys-btn danger" data-action="restart">Restart <span>⟳</span></button>
+            <button class="sys-btn danger" data-action="shutdown">Shutdown <span>⏻</span></button>
+          </div>
+          <div class="card">
+            <h3>DISPLAY</h3>
+            <div class="slider-row">
+              <span>Brightness: <span id="bright-val">70</span>%</span>
+              <input type="range" id="bright-slider" min="0" max="100" value="70">
+            </div>
+            <button class="sys-btn" data-action="screenshot">Take Screenshot <span>▣</span></button>
+            <div id="sys-log"></div>
+          </div>
+          <div class="card">
+            <h3>LIVE SYSTEM INFO</h3>
+            <div class="metric-row"><span>CPU</span><b id="sysinfo-cpu">–</b></div>
+            <div class="metric-row"><span>RAM</span><b id="sysinfo-ram">–</b></div>
+            <div class="metric-row"><span>Disk</span><b id="sysinfo-disk">–</b></div>
+            <div class="metric-row"><span>Battery</span><b id="sysinfo-battery">–</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUDY & DIET -->
+    <div class="page" id="page-study">
+      <div class="flat-page">
+        <div class="flat-grid">
+          <div class="card">
+            <h3>PERFORMANCE INDEX</h3>
+            <div class="metric-row"><span>Overall Index</span><b id="m-index">–</b></div>
+            <div class="metric-row"><span>Consistency</span><b id="m-consistency">–</b></div>
+            <div class="metric-row"><span>Efficiency</span><b id="m-efficiency">–</b></div>
+            <div class="metric-row"><span>Momentum</span><b id="m-momentum">–</b></div>
+            <form id="study-log-form" class="inline-form">
+              <input type="text" id="study-subject" placeholder="Subject">
+              <input type="text" id="study-hours" placeholder="Hrs" style="max-width:44px;">
+              <input type="text" id="study-understanding" placeholder="1-10" style="max-width:44px;">
+              <button type="submit">Log</button>
+            </form>
+          </div>
+          <div class="card">
+            <h3>WEEKLY GOAL</h3>
+            <div class="metric-row"><span>Logged this week</span><b id="goal-logged">–</b></div>
+            <div class="metric-row"><span>Goal</span><b id="goal-target">–</b></div>
+            <div class="metric-row"><span>Progress</span><b id="goal-pct">–</b></div>
+            <div class="inline-form"><input type="text" id="goal-input" placeholder="Hours/week target"><button id="goal-save-btn">Set</button></div>
+          </div>
+          <div class="card">
+            <h3>QUIZ ME</h3>
+            <div class="inline-form"><input type="text" id="quiz-subject" placeholder="Subject to quiz on"><button id="quiz-btn">Generate</button></div>
+            <div id="quiz-result" class="result-box" style="max-height:180px; overflow-y:auto; white-space:pre-wrap;"></div>
+          </div>
+          <div class="card span-2">
+            <h3>DIET PLANNER</h3>
+            <form id="diet-form" class="stack" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+              <input type="text" id="d-weight" placeholder="Weight (kg)">
+              <input type="text" id="d-height" placeholder="Height (cm)">
+              <input type="text" id="d-age" placeholder="Age">
+              <select id="d-sex"><option value="male">Male</option><option value="female">Female</option></select>
+              <select id="d-activity">
+                <option value="sedentary">Sedentary</option><option value="light">Light</option>
+                <option value="moderate" selected>Moderate</option><option value="active">Active</option>
+                <option value="very_active">Very Active</option>
+              </select>
+              <select id="d-goal"><option value="lose">Lose weight</option><option value="maintain">Maintain</option><option value="gain">Gain</option></select>
+              <button type="submit" style="grid-column:span 3;">Calculate</button>
+            </form>
+            <div id="diet-result" class="result-box"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMUNICATE (WhatsApp + Email) -->
+    <div class="page" id="page-comm">
+      <div class="flat-page">
+        <div class="flat-grid">
+          <div class="card">
+            <h3>WHATSAPP</h3>
+            <form id="wa-form" class="stack">
+              <input type="text" id="wa-number" placeholder="+92xxxxxxxxxx">
+              <textarea id="wa-message" placeholder="Message..."></textarea>
+              <button type="submit">Send via WhatsApp Web</button>
+            </form>
+            <div id="wa-result" class="result-box"></div>
+          </div>
+          <div class="card">
+            <h3>EMAIL — COMPOSE</h3>
+            <form id="mail-form" class="stack">
+              <input type="text" id="mail-to" placeholder="To">
+              <input type="text" id="mail-subject" placeholder="Subject">
+              <textarea id="mail-body" placeholder="Message..."></textarea>
+              <button type="submit">Send Email</button>
+            </form>
+            <div id="mail-result" class="result-box"></div>
+          </div>
+          <div class="card span-2">
+            <h3>EMAIL — UNREAD INBOX</h3>
+            <button class="sys-btn" id="refresh-mail">Refresh Unread <span>↻</span></button>
+            <div id="mail-list" style="max-height:220px; overflow-y:auto;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOOLS -->
+    <div class="page" id="page-tools">
+      <div class="flat-page">
+        <div class="flat-grid">
+          <div class="card">
+            <h3>FILES</h3>
+            <div class="inline-form"><input type="text" id="organize-path" placeholder="Folder path (blank = Downloads)"><button id="organize-btn">Sort</button></div>
+            <div class="inline-form"><input type="text" id="find-name" placeholder="Find file by name"><button id="find-btn">Find</button></div>
+            <div id="tools-result" class="result-box"></div>
+          </div>
+          <div class="card">
+            <h3>RENAME &amp; MOVE</h3>
+            <input type="text" id="rename-path" placeholder="File path">
+            <div class="inline-form"><input type="text" id="rename-newname" placeholder="New name"><button id="rename-btn">Rename</button></div>
+            <input type="text" id="move-path" placeholder="File path" style="margin-top:6px;">
+            <div class="inline-form"><input type="text" id="move-dest" placeholder="Destination folder"><button id="move-btn">Move</button></div>
+            <input type="text" id="suggest-path" placeholder="File path to analyze" style="margin-top:6px;">
+            <button id="suggest-btn" class="sys-btn">Suggest Name</button>
+            <div id="rename-result" class="result-box"></div>
+          </div>
+          <div class="card">
+            <h3>LAUNCH</h3>
+            <div class="inline-form"><input type="text" id="app-name" placeholder="App name (e.g. notepad)"><button id="app-btn">Open</button></div>
+            <div class="inline-form"><input type="text" id="site-name" placeholder="Website URL"><button id="site-btn">Open</button></div>
+          </div>
+          <div class="card">
+            <h3>CLIPBOARD</h3>
+            <div class="inline-form"><input type="text" id="clip-text" placeholder="Text to copy"><button id="clip-write-btn">Copy</button></div>
+            <button class="sys-btn" id="clip-read-btn">Read Clipboard <span>⎘</span></button>
+          </div>
+          <div class="card">
+            <h3>VISION / OCR</h3>
+            <div class="inline-form"><input type="text" id="ocr-path" placeholder="Image file path"><button id="ocr-btn">Read Text</button></div>
+            <div id="ocr-result" class="result-box"></div>
+          </div>
+          <div class="card">
+            <h3>DOCUMENT ANALYZER (PDF/IMAGE)</h3>
+            <input type="text" id="doc-path" placeholder="File path (PDF, image, or text file)">
+            <input type="text" id="doc-question" placeholder="What to do (blank = summarize)" style="margin-top:6px;">
+            <button id="doc-btn" class="sys-btn" style="margin-top:6px;">Analyze</button>
+            <div id="doc-result" class="result-box"></div>
+          </div>
+          <div class="card">
+            <h3>YOUTUBE PLAYBACK</h3>
+            <button class="sys-btn" data-yt="speed_up">Speed Up <span>»</span></button>
+            <button class="sys-btn" data-yt="speed_down">Speed Down <span>«</span></button>
+            <button class="sys-btn" data-yt="captions">Toggle Captions <span>CC</span></button>
+            <button class="sys-btn" data-yt="theater">Theater Mode <span>▭</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESEARCH -->
+    <div class="page" id="page-research">
+      <div class="flat-page">
+        <div class="flat-grid">
+          <div class="card span-2">
+            <h3>DEEP RESEARCH</h3>
+            <div style="font-size:11.5px; color:var(--text-muted);">Pulls from Wikipedia + Semantic Scholar (the legitimate free alternative to Google Scholar, which has no API) + a general web search, then writes an organized article and saves it as a file you can download.</div>
+            <div class="inline-form"><input type="text" id="research-topic" placeholder="Topic to research"><button id="research-btn">Research</button></div>
+            <div id="research-status" style="font-size:11px; color:var(--text-muted);"></div>
+            <div id="research-result" class="result-box" style="max-height:340px; overflow-y:auto; white-space:pre-wrap;"></div>
+            <a id="research-download" class="sys-btn" style="display:none; text-align:center; text-decoration:none;" download>Download Article ⬇</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETECTION SYSTEM -->
+    <div class="page" id="page-detect">
+      <div class="flat-page">
+        <div class="flat-grid">
+          <div class="card span-2" style="position:relative; min-height:280px;">
+            <h3>CAMERA FEED</h3>
+            <video id="cam-video" autoplay muted playsinline style="width:100%; max-width:420px; border:1px solid var(--border); border-radius:6px; transform:scaleX(-1);"></video>
+            <canvas id="cam-canvas" style="display:none;"></canvas>
+          </div>
+          <div class="card">
+            <h3>DETECTION CONTROLS</h3>
+            <button class="sys-btn" id="cam-start-btn">Start Camera <span>◉</span></button>
+            <button class="sys-btn" id="cam-stop-btn">Stop Camera <span>■</span></button>
+            <div class="metric-row"><span>Faces detected</span><b id="det-faces">–</b></div>
+            <div class="metric-row"><span>Motion level</span><b id="det-motion">–</b></div>
+            <div class="metric-row"><span>Motion alert</span><b id="det-alert" style="color:var(--text-muted);">quiet</b></div>
+            <div id="det-note" style="font-size:11px; color:var(--text-muted); margin-top:6px; line-height:1.5;">
+              Browser-native camera + face detection (Chrome's Shape Detection API) and frame-difference motion detection — no model download, nothing sent anywhere. Emotion/mood detection needs a real ML model to be accurate; intentionally not faked here.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="flat-page">
+        <div class="flat-grid">
+        <div class="card">
+          <h3>AI ENGINE</h3>
+          <div class="val">Provider: <span class="mono" id="engine-provider">local</span></div>
+          <div class="val" style="margin-top:6px; color:var(--text-muted); font-size:12px;">
+            <span id="engine-desc">Chat runs fully offline on this PC via a downloaded model file — no API key, no cloud calls. Intent routing (understanding what you asked for) is Gyrus's own locally-trained classifier — always local, regardless of chat engine.</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>YOUR PROFILE (SAVED LOCALLY)</h3>
+          <div class="inline-form"><input type="text" id="profile-name" placeholder="Your name"><button id="save-name-btn">Save</button></div>
+          <div class="inline-form" style="margin-top:6px;"><input type="text" id="profile-note" placeholder="Something to remember..."><button id="save-note-btn">Add</button></div>
+          <div id="profile-notes" style="font-size:11px; color:var(--text-muted); margin-top:8px; max-height:100px; overflow-y:auto;"></div>
+        </div>
+        <div class="card">
+          <h3>ANALYZE A PROFILE</h3>
+          <div class="inline-form"><input type="text" id="analyze-url" placeholder="GitHub/LinkedIn/site URL"><button id="analyze-btn">Analyze</button></div>
+          <div id="analyze-result" class="result-box" style="margin-top:8px;"></div>
+        </div>
+        <div class="card">
+          <h3>ABOUT</h3>
+          <div class="val">Gyrus — bilingual local personal assistant</div>
+          <div class="val" style="color:var(--text-muted); font-size:12px; margin-top:4px;">Created by Muhammad Farhan</div>
+          <div class="link-row">
+            <a href="https://github.com/Farhanillahiclass" target="_blank">GITHUB ↗</a>
+            <a href="https://www.linkedin.com/in/muhammadfarhanmrs" target="_blank">LINKEDIN ↗</a>
+          </div>
+        </div>
+        </div>
+        <div id="brand-footer">GYRUS — POWERED BY <b>MRS OFFICIAL</b></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8765";
+const CYAN = "#3ec6ff", GOLD = "#d9ac4f", DANGER = "#e0605a";
+
+/* ============================================================
+   GYRUS ORB — Canvas 2D animated network sphere, matching the
+   reference design. Three.js/WebGL was removed entirely: this
+   is the only visual on the whole dashboard now, and a plain
+   2D canvas has zero external dependencies and zero risk of
+   the WebGL/CDN-loading failures that caused problems earlier.
+============================================================ */
+window.gyrusPulse = 'idle';       // idle | listening | thinking
+window.gyrusSpeaking = false;      // driven by real speechSynthesis events
+
+(function buildOrb(){
+  const canvas = document.getElementById('orb-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, cx = W/2, cy = H/2, R = 150;
+
+  // points scattered inside the sphere, each with its own depth/orbit for a 3D-ish feel
+  const points = [];
+  for(let i=0;i<70;i++){
+    const theta = Math.random()*Math.PI*2;
+    const r = Math.sqrt(Math.random())*R;
+    points.push({baseAngle:theta, r, speed:0.1+Math.random()*0.3, z:Math.random()});
+  }
+
+  let t = 0;
+  function draw(){
+    t += 0.015;
+    ctx.clearRect(0,0,W,H);
+
+    // outer glow rings
+    for(let i=0;i<3;i++){
+      ctx.beginPath();
+      ctx.arc(cx, cy, R + i*14 + Math.sin(t+i)*3, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(62,198,255,${0.15 - i*0.04})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // radial glow fill
+    const grad = ctx.createRadialGradient(cx,cy,10, cx,cy,R);
+    grad.addColorStop(0, 'rgba(62,198,255,0.12)');
+    grad.addColorStop(1, 'rgba(62,198,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.fill();
+
+    // compute current point positions
+    const pulseSpeed = window.gyrusPulse === 'thinking' ? 2.2 : window.gyrusPulse === 'listening' ? 3 : 1;
+    const glowBoost = window.gyrusSpeaking ? 1.6 : 1;
+    const positions = points.map(p=>{
+      const angle = p.baseAngle + t*p.speed*pulseSpeed;
+      const rad = p.r * (0.85 + 0.15*Math.sin(t*2 + p.z*10));
+      return {x: cx + Math.cos(angle)*rad, y: cy + Math.sin(angle)*rad*0.9, z: p.z};
+    });
+
+    // connecting lines between nearby points
+    ctx.lineWidth = 0.6;
+    for(let i=0;i<positions.length;i++){
+      for(let j=i+1;j<positions.length;j++){
+        const dx = positions[i].x-positions[j].x, dy = positions[i].y-positions[j].y;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        if(dist < 38){
+          ctx.strokeStyle = `rgba(62,198,255,${(1-dist/38)*0.35*glowBoost})`;
+          ctx.beginPath(); ctx.moveTo(positions[i].x,positions[i].y); ctx.lineTo(positions[j].x,positions[j].y); ctx.stroke();
+        }
+      }
+    }
+    // nodes
+    positions.forEach(p=>{
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 1.4 + p.z*1.4, 0, Math.PI*2);
+      ctx.fillStyle = p.z > 0.7 ? `rgba(217,172,79,${0.8*glowBoost})` : `rgba(62,198,255,${0.7*glowBoost})`;
+      ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+const pageTitles = {home:'GYRUS', tasks:'TASKS', system:'SYSTEM CONTROL', study:'STUDY & DIET', comm:'COMMUNICATE', tools:'TOOLS', research:'RESEARCH', detect:'DETECTION SYSTEM', settings:'SETTINGS'};
+
+function goToPage(page){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.page===page));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id==='page-'+page));
+  document.getElementById('page-title').textContent = pageTitles[page];
+  if(page==='tasks') refreshTasks();
+  if(page==='study') { refreshStudy(); refreshGoal(); }
+  if(page==='system') refreshSystemInfo();
+  if(page==='settings') refreshSettings();
+  if(page==='detect' && camStream) { /* camera already running, nothing to do */ }
+  if(page!=='detect' && typeof camStream!=='undefined' && camStream) stopCamera();
+}
+document.querySelectorAll('.nav-btn').forEach(btn=>btn.addEventListener('click', ()=>goToPage(btn.dataset.page)));
+
+
+/* ================= STATUS ================= */
+async function checkStatus(){
+  try{
+    const r = await fetch(API+'/api/status');
+    if(r.ok){ document.getElementById('status-text').textContent='GYRUS READY (LOCAL)'; return; }
+  }catch(e){}
+  document.getElementById('status-text').textContent='BACKEND OFFLINE — RUN server.py';
+}
+checkStatus(); setInterval(checkStatus, 8000);
+
+/* ================= REAL-TIME REMINDERS ================= */
+// Polls for due tasks while the dashboard is open and announces them —
+// both visually (an on-screen banner) and out loud (speech synthesis) —
+// independent of whether main.py's CLI is also running.
+async function checkDueReminders(){
+  try{
+    const r = await fetch(API+'/api/tasks/due');
+    const data = await r.json();
+    (data.due || []).forEach(task => {
+      addLine('illi', `⏰ Reminder: ${task.text}`);
+      speak(`Sir, aap ka task pending hai: ${task.text}`);
+    });
+  }catch(e){ /* backend offline — silently skip, checkStatus already reports this */ }
+}
+setInterval(checkDueReminders, 15000);
+
+/* ================= HOME: CHAT ================= */
+const commandLog = document.getElementById('command-log');
+function addLine(role, text){
+  const div = document.createElement('div');
+  div.className = 'cl-line ' + role;
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  div.innerHTML = `<span class="cl-time">${time}</span>${role==='user'?'YOU: ':'GYRUS: '}${text}`;
+  commandLog.appendChild(div); commandLog.scrollTop = commandLog.scrollHeight;
+}
+async function sendMessage(text){
+  if(!text.trim()) return;
+  addLine('user', text);
+  window.gyrusPulse = 'thinking';
+  try{
+    const r = await fetch(API+'/api/message', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
+    const data = await r.json();
+    addLine('illi', data.reply || '...');
+    speak(data.reply);
+    if(document.getElementById('page-tasks').classList.contains('active')) refreshTasks();
+  }catch(e){ addLine('illi', 'Backend se connect nahi ho saka — run: python server.py'); }
+  window.gyrusPulse = 'idle';
+}
+document.getElementById('send-btn').addEventListener('click', ()=>{
+  sendMessage(document.getElementById('text-input').value); document.getElementById('text-input').value='';
+});
+document.getElementById('text-input').addEventListener('keydown', e=>{ if(e.key==='Enter'){ sendMessage(e.target.value); e.target.value=''; } });
+const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micBtn = document.getElementById('mic-btn');
+if(SpeechRecognitionAPI){
+  const rec = new SpeechRecognitionAPI(); rec.lang='ur-PK';
+  rec.onresult = e => sendMessage(e.results[0][0].transcript);
+  rec.onstart = () => { window.gyrusPulse='listening'; micBtn.classList.add('listening'); };
+  rec.onend = () => { window.gyrusPulse='idle'; micBtn.classList.remove('listening'); };
+  micBtn.addEventListener('click', ()=>{ try{rec.start();}catch(e){} });
+}else{ micBtn.style.opacity=0.35; }
+function speak(text){
+  if(!('speechSynthesis' in window) || !text) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text.replace(/[*_#`]/g,''));
+  utter.onstart = () => { window.gyrusSpeaking = true; };
+  utter.onend = () => { window.gyrusSpeaking = false; };
+  utter.onerror = () => { window.gyrusSpeaking = false; };
+  window.speechSynthesis.speak(utter);
+}
+
+/* ================= TASKS ================= */
+async function refreshTasks(){
+  try{
+    const r = await fetch(API+'/api/tasks');
+    const data = await r.json();
+    // (task priority visualization was a 3D-only feature; the flat list below is now the single source of truth)
+    const list = document.getElementById('task-list');
+    list.innerHTML = data.tasks.length ? data.tasks.map(t=>`
+      <div class="task-row"><span class="pr">${t.priority}</span><span class="txt">${t.text}</span><button data-id="${t.id}" class="complete-btn">✓</button></div>`).join('')
+      : '<div style="color:var(--text-muted);font-size:12px;">No pending tasks</div>';
+    document.querySelectorAll('.complete-btn').forEach(b=>b.addEventListener('click', async ()=>{
+      await fetch(`${API}/api/tasks/${b.dataset.id}/complete`, {method:'POST'}); refreshTasks();
+    }));
+  }catch(e){ document.getElementById('task-list').innerHTML = '<div style="color:var(--text-muted);font-size:12px;">Backend offline</div>'; }
+}
+document.getElementById('add-task-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const text = document.getElementById('task-text').value.trim();
+  const priority = document.getElementById('task-priority').value;
+  if(!text) return;
+  await fetch(API+'/api/tasks/add', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text, priority})});
+  document.getElementById('task-text').value=''; refreshTasks();
+});
+
+/* ================= SYSTEM ================= */
+document.querySelectorAll('.sys-btn[data-action]').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    const action = btn.dataset.action;
+    if((action==='restart' || action==='shutdown') && !confirm(`Pakka ${action} karna hai?`)) return;
+    window.systemPulse = 3;
+    try{
+      const r = await fetch(API+'/api/system', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action, confirmed:true})});
+      const data = await r.json(); logSys(data.reply);
+    }catch(e){ logSys('Backend offline'); }
+    setTimeout(()=>window.systemPulse=1, 1500);
+  });
+});
+document.getElementById('bright-slider').addEventListener('input', e=>{ document.getElementById('bright-val').textContent = e.target.value; });
+document.getElementById('bright-slider').addEventListener('change', async e=>{
+  try{
+    const r = await fetch(API+'/api/system', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'brightness', value: parseInt(e.target.value)})});
+    const data = await r.json(); logSys(data.reply);
+  }catch(err){ logSys('Backend offline'); }
+});
+function logSys(msg){
+  const log = document.getElementById('sys-log');
+  const line = document.createElement('div'); line.textContent = '› ' + msg; log.prepend(line);
+}
+async function refreshSystemInfo(){
+  try{
+    const r = await fetch(API+'/api/system/info');
+    const info = await r.json();
+    document.getElementById('sysinfo-cpu').textContent = info.cpu_percent + '%';
+    document.getElementById('sysinfo-ram').textContent = `${info.ram_percent}% (${info.ram_used_gb}/${info.ram_total_gb} GB)`;
+    document.getElementById('sysinfo-disk').textContent = info.disk_percent + '%';
+    document.getElementById('sysinfo-battery').textContent = info.battery_percent != null ? `${info.battery_percent}%${info.battery_plugged ? ' (charging)' : ''}` : 'n/a (desktop)';
+  }catch(e){}
+}
+
+const GAUGE_CIRCUMFERENCE = 2 * Math.PI * 26; // matches r=26 in the SVG gauges
+function setGauge(elId, valId, percent, suffix=''){
+  const circle = document.getElementById(elId);
+  const label = document.getElementById(valId);
+  if(!circle) return;
+  const offset = GAUGE_CIRCUMFERENCE * (1 - Math.min(100, percent)/100);
+  circle.style.strokeDashoffset = offset;
+  if(label) label.textContent = percent + suffix;
+}
+const cpuHistory = [];
+function drawActivityChart(){
+  const canvas = document.getElementById('activity-chart');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  if(cpuHistory.length < 2) return;
+  ctx.beginPath();
+  cpuHistory.forEach((v,i)=>{
+    const x = (i/(cpuHistory.length-1)) * W;
+    const y = H - (v/100)*H;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = CYAN; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(62,198,255,0.25)'); grad.addColorStop(1,'rgba(62,198,255,0)');
+  ctx.fillStyle = grad; ctx.fill();
+}
+
+async function refreshHomeStatus(){
+  try{
+    const r = await fetch(API+'/api/system/info');
+    const info = await r.json();
+    setGauge('gauge-cpu', 'gaugeval-cpu', Math.round(info.cpu_percent), '%');
+    setGauge('gauge-ram', 'gaugeval-ram', Math.round(info.ram_percent), '%');
+    document.getElementById('home-disk').textContent = info.disk_percent + '%';
+    cpuHistory.push(info.cpu_percent);
+    if(cpuHistory.length > 30) cpuHistory.shift();
+    drawActivityChart();
+    document.getElementById('home-backend').innerHTML = '<span style="color:var(--cyan)">online</span>';
+  }catch(e){
+    document.getElementById('home-backend').innerHTML = '<span style="color:var(--danger)">offline</span>';
+  }
+  try{
+    const r2 = await fetch(API+'/api/tasks');
+    const data = await r2.json();
+    document.getElementById('home-tasks').textContent = data.summary.pending;
+  }catch(e){}
+  try{
+    const r3 = await fetch(API+'/api/status');
+    const data = await r3.json();
+    document.getElementById('home-provider').textContent = data.provider;
+  }catch(e){}
+  try{
+    const r4 = await fetch(API+'/api/profile');
+    const data = await r4.json();
+    document.getElementById('home-memory').textContent = data.name ? `${data.notes.length} note(s) saved` : 'not set up yet';
+  }catch(e){}
+}
+refreshHomeStatus();
+setInterval(()=>{ if(document.getElementById('page-home').classList.contains('active')) refreshHomeStatus(); }, 6000);
+
+/* ================= STUDY & DIET ================= */
+async function refreshStudy(){
+  try{
+    const r = await fetch(API+'/api/study/performance');
+    const p = await r.json();
+    document.getElementById('m-index').textContent = p.performance_index ?? '–';
+    document.getElementById('m-consistency').textContent = (p.consistency_pct ?? '–') + '%';
+    document.getElementById('m-efficiency').textContent = (p.study_efficiency_pct ?? '–') + '%';
+    document.getElementById('m-momentum').textContent = (p.momentum_pct ?? '–') + '%';
+    // (3D bar chart removed with the flat-page redesign; numbers above are the source of truth)
+  }catch(e){}
+}
+document.getElementById('study-log-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const subject = document.getElementById('study-subject').value.trim();
+  const hours = parseFloat(document.getElementById('study-hours').value);
+  const understanding = parseInt(document.getElementById('study-understanding').value);
+  if(!subject || !hours || !understanding) return;
+  await fetch(API+'/api/study/log', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({subject, hours, understanding})});
+  document.getElementById('study-subject').value=''; document.getElementById('study-hours').value=''; document.getElementById('study-understanding').value='';
+  refreshStudy();
+});
+document.getElementById('diet-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const payload = {
+    weight_kg: parseFloat(document.getElementById('d-weight').value),
+    height_cm: parseFloat(document.getElementById('d-height').value),
+    age: parseInt(document.getElementById('d-age').value),
+    sex: document.getElementById('d-sex').value,
+    activity_level: document.getElementById('d-activity').value,
+    goal: document.getElementById('d-goal').value,
+    suggest_meals: false
+  };
+  const r = await fetch(API+'/api/diet/calculate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  const data = await r.json();
+  const box = document.getElementById('diet-result');
+  box.classList.add('show');
+  box.innerHTML = `Target: <b style="color:var(--gold)">${data.macros.target_calories} kcal/day</b><br>Protein ${data.macros.protein_g}g · Fat ${data.macros.fat_g}g · Carbs ${data.macros.carbs_g}g`;
+});
+
+async function refreshGoal(){
+  try{
+    const r = await fetch(API+'/api/study/progress');
+    const p = await r.json();
+    document.getElementById('goal-logged').textContent = p.hours_logged + 'h';
+    document.getElementById('goal-target').textContent = p.goal_hours ? p.goal_hours + 'h' : 'not set';
+    document.getElementById('goal-pct').textContent = p.progress_pct != null ? p.progress_pct + '%' : '–';
+  }catch(e){}
+}
+document.getElementById('goal-save-btn').addEventListener('click', async ()=>{
+  const hours = parseFloat(document.getElementById('goal-input').value);
+  if(!hours) return;
+  await fetch(API+'/api/study/goal', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({hours_per_week: hours})});
+  document.getElementById('goal-input').value='';
+  refreshGoal();
+});
+document.getElementById('quiz-btn').addEventListener('click', async ()=>{
+  const subject = document.getElementById('quiz-subject').value.trim();
+  if(!subject) return;
+  const box = document.getElementById('quiz-result');
+  box.classList.add('show'); box.textContent = 'Generating…';
+  try{
+    const r = await fetch(API+'/api/study/quiz', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({subject})});
+    const data = await r.json(); box.textContent = data.quiz;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+
+/* ================= COMMUNICATE ================= */
+document.getElementById('wa-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const phone_number = document.getElementById('wa-number').value.trim();
+  const message = document.getElementById('wa-message').value.trim();
+  const box = document.getElementById('wa-result'); box.classList.add('show'); box.textContent = 'Sending…';
+  try{
+    const r = await fetch(API+'/api/whatsapp/send', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({phone_number, message})});
+    const data = await r.json(); box.textContent = data.reply;
+  }catch(err){ box.textContent = 'Backend offline'; }
+});
+document.getElementById('refresh-mail').addEventListener('click', async ()=>{
+  const list = document.getElementById('mail-list'); list.textContent = 'Loading…';
+  try{
+    const r = await fetch(API+'/api/email/unread');
+    const data = await r.json();
+    list.innerHTML = data.messages.map(m=> m.error ? `<div class="email-item">${m.error}</div>` :
+      `<div class="email-item"><b>${m.from}</b><br>${m.subject}<br><span style="color:var(--text-muted)">${m.snippet}</span></div>`).join('') || '<div class="email-item">No unread messages</div>';
+  }catch(e){ list.textContent = 'Backend offline'; }
+});
+document.getElementById('mail-form').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const to_address = document.getElementById('mail-to').value.trim();
+  const subject = document.getElementById('mail-subject').value.trim();
+  const body = document.getElementById('mail-body').value.trim();
+  const box = document.getElementById('mail-result'); box.classList.add('show'); box.textContent = 'Sending…';
+  try{
+    const r = await fetch(API+'/api/email/send', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({to_address, subject, body})});
+    const data = await r.json(); box.textContent = data.reply;
+  }catch(err){ box.textContent = 'Backend offline'; }
+});
+
+/* ================= TOOLS ================= */
+document.getElementById('organize-btn').addEventListener('click', async ()=>{
+  const target = document.getElementById('organize-path').value.trim() || null;
+  const box = document.getElementById('tools-result'); box.classList.add('show'); box.textContent = 'Working…';
+  try{
+    const r = await fetch(API+'/api/tools', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'organize', target})});
+    const data = await r.json(); box.textContent = data.reply;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+document.getElementById('find-btn').addEventListener('click', async ()=>{
+  const target = document.getElementById('find-name').value.trim();
+  const box = document.getElementById('tools-result'); box.classList.add('show'); box.textContent = 'Searching…';
+  try{
+    const r = await fetch(API+'/api/tools', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'find', target})});
+    const data = await r.json(); box.textContent = data.reply;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+document.getElementById('app-btn').addEventListener('click', async ()=>{
+  const target = document.getElementById('app-name').value.trim();
+  await fetch(API+'/api/tools', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'open_app', target})});
+});
+document.getElementById('site-btn').addEventListener('click', async ()=>{
+  const target = document.getElementById('site-name').value.trim();
+  await fetch(API+'/api/tools', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'open_website', target})});
+});
+document.getElementById('clip-write-btn').addEventListener('click', async ()=>{
+  const value = document.getElementById('clip-text').value;
+  await fetch(API+'/api/tools', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'clipboard_write', value})});
+});
+document.getElementById('clip-read-btn').addEventListener('click', async ()=>{
+  const box = document.getElementById('tools-result'); box.classList.add('show'); box.textContent = 'Reading…';
+  try{
+    const r = await fetch(API+'/api/tools', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'clipboard_read'})});
+    const data = await r.json(); box.textContent = data.reply;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+document.getElementById('ocr-btn').addEventListener('click', async ()=>{
+  const image_path = document.getElementById('ocr-path').value.trim();
+  const box = document.getElementById('ocr-result'); box.classList.add('show'); box.textContent = 'Reading image…';
+  try{
+    const r = await fetch(API+'/api/vision/ocr', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({image_path})});
+    const data = await r.json(); box.textContent = data.text;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+
+document.getElementById('doc-btn').addEventListener('click', async ()=>{
+  const path = document.getElementById('doc-path').value.trim();
+  const question = document.getElementById('doc-question').value.trim() || 'Summarize this document clearly.';
+  if(!path) return;
+  const box = document.getElementById('doc-result'); box.classList.add('show'); box.textContent = 'Analyzing…';
+  try{
+    const r = await fetch(API+'/api/documents/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({path, question})});
+    const data = await r.json(); box.textContent = data.reply;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+
+document.getElementById('rename-btn').addEventListener('click', async ()=>{
+  const path = document.getElementById('rename-path').value.trim();
+  const new_name = document.getElementById('rename-newname').value.trim();
+  const box = document.getElementById('rename-result'); box.classList.add('show'); box.textContent = 'Working…';
+  try{
+    const r = await fetch(API+'/api/files/rename', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({path, new_name})});
+    const data = await r.json(); box.textContent = data.reply;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+document.getElementById('move-btn').addEventListener('click', async ()=>{
+  const path = document.getElementById('move-path').value.trim();
+  const destination = document.getElementById('move-dest').value.trim();
+  const box = document.getElementById('rename-result'); box.classList.add('show'); box.textContent = 'Working…';
+  try{
+    const r = await fetch(API+'/api/files/move', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({path, destination})});
+    const data = await r.json(); box.textContent = data.reply;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+document.getElementById('suggest-btn').addEventListener('click', async ()=>{
+  const path = document.getElementById('suggest-path').value.trim();
+  const box = document.getElementById('rename-result'); box.classList.add('show'); box.textContent = 'Analyzing content…';
+  try{
+    const r = await fetch(API+'/api/files/suggest-name', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({path})});
+    const data = await r.json();
+    box.textContent = data.error || `Suggested: "${data.suggested}" (was "${data.original}") — use Rename above to apply it.`;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+document.querySelectorAll('.sys-btn[data-yt]').forEach(btn=>{
+  btn.addEventListener('click', async ()=>{
+    try{ await fetch(API+'/api/youtube', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action: btn.dataset.yt})}); }catch(e){}
+  });
+});
+
+/* ================= RESEARCH ================= */
+document.getElementById('research-btn').addEventListener('click', async ()=>{
+  const topic = document.getElementById('research-topic').value.trim();
+  if(!topic) return;
+  const status = document.getElementById('research-status');
+  const box = document.getElementById('research-result');
+  const dl = document.getElementById('research-download');
+  status.textContent = 'Researching — checking Wikipedia, Semantic Scholar, and the web (this can take 15-30s)…';
+  box.classList.add('show'); box.textContent = ''; dl.style.display = 'none';
+  try{
+    const r = await fetch(API+'/api/research/deep', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({topic})});
+    const data = await r.json();
+    status.textContent = `Sources used: Wikipedia${data.wikipedia_url ? ' ✓' : ' (not found)'}, ${data.paper_count} academic paper(s).`;
+    box.textContent = data.article;
+    dl.href = `${API}/api/research/download/${data.filename}`;
+    dl.textContent = `Download Article (${data.filename}) ⬇`;
+    dl.style.display = 'block';
+  }catch(e){ status.textContent = ''; box.textContent = 'Backend offline'; }
+});
+
+/* ================= DETECTION SYSTEM ================= */
+let camStream = null, detectLoopId = null, prevFrame = null;
+let faceDetectorNative = ('FaceDetector' in window) ? new FaceDetector({maxDetectedFaces:5}) : null;
+
+async function startCamera(){
+  try{
+    camStream = await navigator.mediaDevices.getUserMedia({video:{width:320,height:240}});
+    const video = document.getElementById('cam-video');
+    video.srcObject = camStream;
+    detectLoop();
+  }catch(e){
+    document.getElementById('det-note').textContent = 'Camera access denied or unavailable: ' + e.message;
+  }
+}
+function stopCamera(){
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
+  if(detectLoopId) cancelAnimationFrame(detectLoopId);
+  document.getElementById('det-faces').textContent = '–';
+  document.getElementById('det-motion').textContent = '–';
+}
+async function detectLoop(){
+  const video = document.getElementById('cam-video');
+  const canvas = document.getElementById('cam-canvas');
+  if(video.readyState === 4){
+    canvas.width = 160; canvas.height = 120;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, 160, 120);
+    const frame = ctx.getImageData(0,0,160,120);
+
+    // motion: simple frame-difference
+    if(prevFrame){
+      let diff = 0;
+      for(let i=0;i<frame.data.length;i+=16){
+        diff += Math.abs(frame.data[i]-prevFrame.data[i]);
+      }
+      const motionPct = Math.min(100, Math.round(diff/2000));
+      document.getElementById('det-motion').textContent = motionPct + '%';
+      const alertEl = document.getElementById('det-alert');
+      if(motionPct > 25){ alertEl.textContent = 'motion detected'; alertEl.style.color = 'var(--gold)'; }
+      else { alertEl.textContent = 'quiet'; alertEl.style.color = 'var(--text-muted)'; }
+    }
+    prevFrame = frame;
+
+    // face detection: native browser API where available (Chrome desktop/Android)
+    if(faceDetectorNative){
+      try{
+        const faces = await faceDetectorNative.detect(video);
+        document.getElementById('det-faces').textContent = faces.length;
+      }catch(e){ /* silently skip a frame on error */ }
+    } else {
+      document.getElementById('det-faces').textContent = 'n/a (browser lacks FaceDetector API)';
+    }
+  }
+  detectLoopId = requestAnimationFrame(detectLoop);
+}
+document.getElementById('cam-start-btn').addEventListener('click', startCamera);
+document.getElementById('cam-stop-btn').addEventListener('click', stopCamera);
+
+/* ================= SETTINGS ================= */
+async function refreshSettings(){
+  try{
+    const r = await fetch(API+'/api/status');
+    const data = await r.json();
+    document.getElementById('engine-provider').textContent = data.provider || 'huggingface';
+    const descs = {
+      huggingface: "Chat uses Hugging Face's free API (a real cloud call). Intent routing (understanding what you asked for) is Gyrus's own locally-trained classifier — always local, regardless of chat engine.",
+      local: "Chat runs fully offline on this PC — no API key, no cloud calls. Intent routing is also local.",
+      gemini: "Chat uses Google Gemini's API (a real cloud call). Intent routing stays local.",
+      anthropic: "Chat uses Anthropic's API (a real cloud call). Intent routing stays local."
+    };
+    document.getElementById('engine-desc').textContent = descs[data.provider] || descs.local;
+  }catch(e){}
+  try{
+    const r2 = await fetch(API+'/api/profile');
+    const p = await r2.json();
+    if(p.name) document.getElementById('profile-name').value = p.name;
+    document.getElementById('profile-notes').innerHTML = (p.notes||[]).slice(-8).reverse().map(n=>`› ${n.text}`).join('<br>') || 'No notes saved yet';
+  }catch(e){}
+}
+document.getElementById('save-name-btn').addEventListener('click', async ()=>{
+  const value = document.getElementById('profile-name').value.trim();
+  if(!value) return;
+  await fetch(API+'/api/profile/fact', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key:'name', value})});
+});
+document.getElementById('save-note-btn').addEventListener('click', async ()=>{
+  const text = document.getElementById('profile-note').value.trim();
+  if(!text) return;
+  await fetch(API+'/api/profile/note', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({text})});
+  document.getElementById('profile-note').value='';
+  refreshSettings();
+});
+document.getElementById('analyze-btn').addEventListener('click', async ()=>{
+  const url = document.getElementById('analyze-url').value.trim();
+  if(!url) return;
+  const box = document.getElementById('analyze-result');
+  box.classList.add('show'); box.textContent = 'Analyzing…';
+  try{
+    const r = await fetch(API+'/api/profile/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})});
+    const data = await r.json(); box.textContent = data.reply;
+  }catch(e){ box.textContent = 'Backend offline'; }
+});
+</script>
+</body>
+</html>

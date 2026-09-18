@@ -1,0 +1,50 @@
+# Core
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Voice
+SpeechRecognition>=3.10.0
+pyttsx3>=2.90
+PyAudio>=0.2.13          # Windows: pip install pipwin && pipwin install pyaudio
+
+# ---- LOCAL AI ENGINE (default, no API, no internet needed after setup) ----
+llama-cpp-python>=0.2.90
+huggingface_hub>=0.24.0    # only for download_model.py — fetches the model file itself, no API key needed
+
+# YouTube / browser / general control
+pywhatkit>=5.4
+pyautogui>=0.9.54
+pyperclip>=1.8.2
+pygetwindow>=0.0.9        # Windows/macOS window management
+screen-brightness-control>=0.16.0
+
+# System control
+psutil>=5.9.0
+
+# Vision (OCR + detection) — adapted from smart-vision-assistant-pro
+opencv-contrib-python-headless>=4.9.0
+pytesseract>=0.3.10        # also requires the Tesseract OCR engine itself, see README
+
+# Notes -> Word docs
+python-docx>=1.1.0
+
+# Scheduling / reminders
+schedule>=1.2.0
+plyer>=2.1.0
+
+# Secure credential storage (auto_login.py)
+keyring>=24.0.0
+
+# Optional: browser automation for auto-login / social-post
+playwright>=1.40.0
+
+# Basic voice-tone mood heuristic
+numpy>=1.26.0
+
+# 3D dashboard backend
+fastapi>=0.110.0
+uvicorn>=0.29.0
+pydantic>=2.6.0
+
+# OPTIONAL cloud fallback (only if you set AI_PROVIDER=gemini/anthropic in .env)
+# — nothing extra to install, cloud_brain.py uses plain requests
