@@ -519,7 +519,7 @@ See the relevant source files for attribution details.
 
 MIT License
 
-Copyright © 2026 Muhammad Farhan — MRS Official.
+Copyright © 2026 Muhammad Farhan .
 
 See [`LICENSE`](LICENSE) for the full license text.
 
