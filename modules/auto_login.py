@@ -11,7 +11,7 @@ Security approach (please don't change this):
     good reasons; use their "remember me" feature or a real password manager instead.
 
 One-time setup for a site:
-    python -c "import keyring; keyring.set_password('gyrus', 'myuni_username', 'farhan123')"
+    python -c "import keyring; keyring.set_password('gyrus', 'myuni_username', 'Real_Username')"
     python -c "import keyring; keyring.set_password('gyrus', 'myuni_password', 'REAL_PASSWORD')"
 """
 
